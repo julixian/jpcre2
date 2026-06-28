@@ -1204,21 +1204,24 @@ class ModifierTable{
 
 
 //These message strings are used for error/warning message construction.
-//take care to prevent multiple definition
-template<typename Char_T> struct MSG{
-    static std::basic_string<Char_T> INVALID_MODIFIER(void);
-    static std::basic_string<Char_T> INSUFFICIENT_OVECTOR(void);
+template<typename Char_T> struct MSG;
+template<> struct MSG<char> {
+    static std::basic_string<char> INVALID_MODIFIER(){ return "Invalid modifier: "; }
+    static std::basic_string<char> INSUFFICIENT_OVECTOR(){ return "ovector wasn't big enough"; }
 };
-//specialization
-template<> inline std::basic_string<char> MSG<char>::INVALID_MODIFIER(){ return "Invalid modifier: "; }
-template<> inline std::basic_string<wchar_t> MSG<wchar_t>::INVALID_MODIFIER(){ return L"Invalid modifier: "; }
-template<> inline std::basic_string<char> MSG<char>::INSUFFICIENT_OVECTOR(){ return "ovector wasn't big enough"; }
-template<> inline std::basic_string<wchar_t> MSG<wchar_t>::INSUFFICIENT_OVECTOR(){ return L"ovector wasn't big enough"; }
+template<> struct MSG<wchar_t> {
+    static std::basic_string<wchar_t> INVALID_MODIFIER(){ return L"Invalid modifier: "; }
+    static std::basic_string<wchar_t> INSUFFICIENT_OVECTOR(){ return L"ovector wasn't big enough"; }
+};
 #if JPCRE2_USE_MINIMUM_CXX_11
-template<> inline std::basic_string<char16_t> MSG<char16_t>::INVALID_MODIFIER(){ return u"Invalid modifier: "; }
-template<> inline std::basic_string<char32_t> MSG<char32_t>::INVALID_MODIFIER(){ return U"Invalid modifier: "; }
-template<> inline std::basic_string<char16_t> MSG<char16_t>::INSUFFICIENT_OVECTOR(){ return u"ovector wasn't big enough"; }
-template<> inline std::basic_string<char32_t> MSG<char32_t>::INSUFFICIENT_OVECTOR(){ return U"ovector wasn't big enough"; }
+template<> struct MSG<char16_t> {
+    static std::basic_string<char16_t> INVALID_MODIFIER(){ return u"Invalid modifier: "; }
+    static std::basic_string<char16_t> INSUFFICIENT_OVECTOR(){ return u"ovector wasn't big enough"; }
+};
+template<> struct MSG<char32_t> {
+    static std::basic_string<char32_t> INVALID_MODIFIER(){ return U"Invalid modifier: "; }
+    static std::basic_string<char32_t> INSUFFICIENT_OVECTOR(){ return U"ovector wasn't big enough"; }
+};
 #endif
 
 ///struct to select the types.
@@ -1357,6 +1360,13 @@ struct select{
         return a?String((Char*) a):String();
     }
 
+    static String asciiToString(char const *a) {
+        String s;
+        if(!a) return s;
+        while(*a) s += (Char)*a++;
+        return s;
+    }
+
     ///Retruns error message from PCRE2 error number
     ///@param err_num error number (negative)
     ///@return message as jpcre2::select::String.
@@ -1372,9 +1382,9 @@ struct select{
     ///@return message as jpcre2::select::String.
     static String getErrorMessage(int err_num, int err_off)  {
         if(err_num == (int)ERROR::INVALID_MODIFIER){
-            return MSG<Char>::INVALID_MODIFIER() + toString((Char)err_off);
+            return asciiToString("Invalid modifier: ") + toString((Char)err_off);
         } else if(err_num == (int)ERROR::INSUFFICIENT_OVECTOR){
-            return MSG<Char>::INSUFFICIENT_OVECTOR();
+            return asciiToString("ovector wasn't big enough");
         } else if(err_num != 0) {
             return getPcre2ErrorMessage((int) err_num);
         } else return String();
